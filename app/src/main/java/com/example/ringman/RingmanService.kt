@@ -175,8 +175,6 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
             .build()
     }
 
-    // TODO - enable on boot!
-
     override fun onTaskRemoved(rootIntent: Intent) {
         val restartServiceIntent = Intent(applicationContext, RingmanService::class.java).also {
             it.setPackage(packageName)

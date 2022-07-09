@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:tools="http://schemas.android.com/tools"
+        xmlns:app="http://schemas.android.com/apk/res-auto" xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -11,26 +11,18 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:textSize="30sp"
-            android:textColor="@color/black"
-            android:text="Let Ringman take care of your ringer mode"/>
+            android:textSize="16sp"
+            android:paddingTop="40sp"
+            android:paddingBottom="40sp"
+            android:text="Let Ringman handle your ringer mode"/>
     <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switch_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:checked="true"/>
-    <Button
-            android:id="@+id/btnStartService"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Start Foreground Service" android:paddingTop="20dp" android:layout_marginTop="20dp"/>
-
-    <Button
-            android:id="@+id/btnStopService"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Stop Foreground Service"/>
-
+            android:scaleX="2"
+            android:scaleY="2"
+            android:checked="false"
+    />
 
 </LinearLayout>

@@ -28,32 +28,21 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // if button enabled, start persistent background work
-        findViewById<Button>(R.id.btnStartService).let {
-            it.setOnClickListener {
+        val btn = findViewById<SwitchCompat>(R.id.switch_btn)
+        // default switch to off before user enables
+        if (getServiceState(this) != ServiceState.ENABLED) {
+            btn.isChecked = false
+        }
+        btn.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
                 Log.i(ContentValues.TAG, "onCreate: Start service")
                 actionOnService(Actions.ENABLE)
             }
-        }
-        findViewById<Button>(R.id.btnStopService).let {
-            it.setOnClickListener {
+            else {
                 Log.i(ContentValues.TAG, "onCreate: Stop service")
                 actionOnService(Actions.DISABLE)
             }
         }
-// todo default switch to off before user interaction
-
-//        val btn = findViewById<SwitchCompat>(R.id.switch_btn)
-//        btn.setOnCheckedChangeListener { _, isChecked ->
-//            if (isChecked) {
-//                Log.i(ContentValues.TAG, "onCreate: Start service")
-//                actionOnService(Actions.ENABLE)
-//            }
-//            else {
-//                Log.i(ContentValues.TAG, "onCreate: Stop service")
-//                actionOnService(Actions.DISABLE)
-//            }
-//        }
     }
 
     private fun actionOnService(action: Actions) {
