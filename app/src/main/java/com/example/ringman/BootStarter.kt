@@ -7,7 +7,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 
-class BootStarter: BroadcastReceiver() {
+class BootStarter: BroadcastReceiver() { // todo - field test this!
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED && getServiceState(context) == ServiceState.ENABLED) {
             Intent(context, RingmanService::class.java).also {

@@ -25,10 +25,8 @@ import android.widget.Toast
 private lateinit var audioManager: AudioManager
 private lateinit var sensorManager: SensorManager
 private lateinit var notificationManager: NotificationManager
-private var light: Sensor? = null
 private var proximity: Sensor? = null
-private const val LUX_THRESHOLD = 5
-private const val CM_THRESHOLD = 1
+private const val CM_THRESHOLD = 0.1
 
 class RingmanService: Service(), SensorEventListener { // TODO - check power and memory use and optimize if necessary
 
@@ -90,10 +88,8 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         notificationManager = this.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-        // set up light sensor access
+        // set up proximity sensor access
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-//        if (sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) != null) {
-//            light = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
         if (sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null) {
             proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
         } else {
@@ -122,15 +118,11 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
         }
     }
 
-//    override fun onSensorChanged(event: SensorEvent) {
-//        if (event.sensor.type == Sensor.TYPE_LIGHT) {
-//            val brightness = event.values[0]
-//            Log.i(TAG, "onSensorChanged: lux val is $brightness")
-//            setRingerState(brightness)
-//        }
-//    }
 
     override fun onSensorChanged(event: SensorEvent) {
+        if (isDisplayInUse()) {
+            return
+        }
         if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
             val distanceInCm = event.values[0]
             Log.i(TAG, "onSensorChanged: prxomity is $distanceInCm cm")
@@ -150,7 +142,6 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
             return
         }
         // core business logic
-//        if (brightness <= LUX_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
         if (distance <= CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
         {
             audioManager.ringerMode = RINGER_MODE_VIBRATE
@@ -219,7 +210,7 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
             .build()
     }
 
-    override fun onTaskRemoved(rootIntent: Intent) {
+    override fun onTaskRemoved(rootIntent: Intent) { // todo - field test this!
         val restartServiceIntent = Intent(applicationContext, RingmanService::class.java).also {
             it.setPackage(packageName)
         }
