@@ -10,6 +10,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.display.DisplayManager
 import android.media.AudioManager
 import android.media.AudioManager.RINGER_MODE_NORMAL
 import android.media.AudioManager.RINGER_MODE_VIBRATE
@@ -18,13 +19,16 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
+import android.view.Display
 import android.widget.Toast
 
 private lateinit var audioManager: AudioManager
 private lateinit var sensorManager: SensorManager
 private lateinit var notificationManager: NotificationManager
 private var light: Sensor? = null
+private var proximity: Sensor? = null
 private const val LUX_THRESHOLD = 5
+private const val CM_THRESHOLD = 1
 
 class RingmanService: Service(), SensorEventListener { // TODO - check power and memory use and optimize if necessary
 
@@ -72,8 +76,12 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
             }
         setupSensorHardware()
         if (isServiceStarted) {
+//            while (!isDisplayInUse()) {
             Log.i(TAG, "runAppLogic: running ringer logic")
-            sensorManager.registerListener(this, light, SensorManager.SENSOR_DELAY_FASTEST)
+//            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
+            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
+//            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+//            }
         }
     }
 
@@ -84,22 +92,57 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
 
         // set up light sensor access
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        if (sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) != null) {
-            light = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+//        if (sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) != null) {
+//            light = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        if (sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null) {
+            proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
         } else {
-            Log.e(TAG, "onCreate: light-sensor not found")
+            Log.e(TAG, "onCreate: proximity-sensor not found")
         }
     }
+
+    private fun isDisplayInUse(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val displayManager = getSystemService (Context.DISPLAY_SERVICE) as DisplayManager
+            for (display in displayManager.displays) {
+                if (display.state != Display.STATE_OFF) {
+                    Log.i(TAG, "setupDisplayHardware: DISPLAY STATE (should be on)- ${display.state}")
+                    return true
+                }
+                Log.i(TAG, "setupDisplayHardware: DISPLAY STATE - ${display.state}")
+            }
+            return false
+        } else {    // if < API20
+            Log.i(TAG, "setupDisplayHardware: checking display for API < 20")
+            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+            if (powerManager.isScreenOn) {
+                return true
+            }
+            return false
+        }
+    }
+
+//    override fun onSensorChanged(event: SensorEvent) {
+//        if (event.sensor.type == Sensor.TYPE_LIGHT) {
+//            val brightness = event.values[0]
+//            Log.i(TAG, "onSensorChanged: lux val is $brightness")
+//            setRingerState(brightness)
+//        }
+//    }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (event.sensor.type == Sensor.TYPE_LIGHT) {
-            val brightness = event.values[0]
-            Log.i(TAG, "onSensorChanged: lux val is $brightness")
-            setRingerState(brightness)
+        if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
+            val distanceInCm = event.values[0]
+            Log.i(TAG, "onSensorChanged: prxomity is $distanceInCm cm")
+            setRingerState(distanceInCm)
         }
     }
 
-    @Synchronized private fun setRingerState(brightness: Float) {
+    @Synchronized private fun setRingerState(distance: Float) {
+
+//        if (isDisplayInUse()) {
+//            Log.i(TAG, "setRingerState: display in use")
+//        }
 
         // shouldn't override DND
         if (notificationManager.currentInterruptionFilter != INTERRUPTION_FILTER_ALL) {
@@ -107,12 +150,13 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
             return
         }
         // core business logic
-        if (brightness <= LUX_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
+//        if (brightness <= LUX_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
+        if (distance <= CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
         {
             audioManager.ringerMode = RINGER_MODE_VIBRATE
             Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
         }
-        else if (brightness > LUX_THRESHOLD && audioManager.ringerMode != RINGER_MODE_NORMAL)
+        else if (distance > CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_NORMAL)
         {
             audioManager.ringerMode = RINGER_MODE_NORMAL
             Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
