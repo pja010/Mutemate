@@ -25,12 +25,12 @@ import android.widget.Toast
 private lateinit var audioManager: AudioManager
 private lateinit var sensorManager: SensorManager
 private lateinit var notificationManager: NotificationManager
+private lateinit var displayManager: DisplayManager
 private var proximity: Sensor? = null
 private const val CM_THRESHOLD = 0.1
 class RingmanService: Service() , SensorEventListener { // TODO - check power and memory use and optimize if necessary
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
-    private var isScreenInUse = true
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "onStartCommand: executed with startId: $startId")
@@ -54,7 +54,8 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
 
     override fun onDestroy() {
         super.onDestroy()
-        sensorManager.unregisterListener(this)
+        stopRingman()
+        displayManager.unregisterDisplayListener(displayListener)
         Log.i(TAG, "onDestroy: service destroyed")
     }
 
@@ -74,7 +75,8 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
 
         setupSensorHardware()
         if (isServiceStarted) {
-            setupDisplay()
+            displayManager.registerDisplayListener(displayListener, null)
+            Log.i(TAG, "setupDisplay: listener registered")
         }
     }
 
@@ -82,7 +84,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
     }
     fun stopRingman() {
-        sensorManager.unregisterListener(this)
+        sensorManager.unregisterListener(this, proximity)
     }
 
     private fun setupSensorHardware() {
@@ -97,11 +99,10 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         } else {
             Log.e(TAG, "onCreate: proximity-sensor not found")
         }
-    }
 
-    private fun setupDisplay() {
+        // setup display
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
             displayManager.registerDisplayListener(displayListener, null)
             Log.i(TAG, "setupDisplay: listener registered")
         }
@@ -110,13 +111,9 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         }
     }
 
-//    private fun isPhoneLocked(): Boolean {
-//        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-//        return keyguardManager.inKeyguardRestrictedInputMode()
-//    }
+
     private fun isDisplayInUse(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            val displayManager = getSystemService (Context.DISPLAY_SERVICE) as DisplayManager
             for (display in displayManager.displays) {
                 if (display.state != STATE_OFF) {
                     Log.i(TAG, "setupDisplayHardware: DISPLAY STATE (should be on)- ${display.state}")
@@ -193,7 +190,8 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         }
         isServiceStarted = false
         setServiceState(this, ServiceState.DISABLED)
-        sensorManager.unregisterListener(this)
+        stopRingman()
+        displayManager.unregisterDisplayListener(displayListener)
     }
 
     private fun createNotification(): Notification {
@@ -240,6 +238,14 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         applicationContext.getSystemService(Context.ALARM_SERVICE)
         val alarmService: AlarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent)
+    }
+
+    // TODO - could use lock state to trigger ringman rather than display state - probably more robust!
+    // algorithm - when isLocked, startRingman, else when unLocked, stopRingman
+    private fun isPhoneLocked(): Boolean {
+        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+        Log.i(TAG, "isPhoneLocked: ${keyguardManager.isDeviceLocked}")
+        return keyguardManager.isDeviceLocked
     }
 
     // unneeded inheritance
