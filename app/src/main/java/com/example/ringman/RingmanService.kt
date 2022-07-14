@@ -19,7 +19,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
-import android.view.Display
+import android.view.Display.STATE_OFF
 import android.widget.Toast
 
 private lateinit var audioManager: AudioManager
@@ -27,11 +27,10 @@ private lateinit var sensorManager: SensorManager
 private lateinit var notificationManager: NotificationManager
 private var proximity: Sensor? = null
 private const val CM_THRESHOLD = 0.1
-
-class RingmanService: Service(), SensorEventListener { // TODO - check power and memory use and optimize if necessary
-
+class RingmanService: Service() , SensorEventListener { // TODO - check power and memory use and optimize if necessary
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
+    private var isScreenInUse = true
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "onStartCommand: executed with startId: $startId")
@@ -72,15 +71,18 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
                     acquire()
                 }
             }
+
         setupSensorHardware()
         if (isServiceStarted) {
-//            while (!isDisplayInUse()) {
-            Log.i(TAG, "runAppLogic: running ringer logic")
-//            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
-            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
-//            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
-//            }
+            setupDisplay()
         }
+    }
+
+    fun startRingman() {
+        sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
+    }
+    fun stopRingman() {
+        sensorManager.unregisterListener(this)
     }
 
     private fun setupSensorHardware() {
@@ -97,11 +99,26 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
         }
     }
 
+    private fun setupDisplay() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+            displayManager.registerDisplayListener(displayListener, null)
+            Log.i(TAG, "setupDisplay: listener registered")
+        }
+        else {
+            Log.e(TAG, "setupDisplay: build version too low")
+        }
+    }
+
+//    private fun isPhoneLocked(): Boolean {
+//        val keyguardManager = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
+//        return keyguardManager.inKeyguardRestrictedInputMode()
+//    }
     private fun isDisplayInUse(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             val displayManager = getSystemService (Context.DISPLAY_SERVICE) as DisplayManager
             for (display in displayManager.displays) {
-                if (display.state != Display.STATE_OFF) {
+                if (display.state != STATE_OFF) {
                     Log.i(TAG, "setupDisplayHardware: DISPLAY STATE (should be on)- ${display.state}")
                     return true
                 }
@@ -118,11 +135,20 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
         }
     }
 
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayChanged(displayId: Int) {
+            Log.i(TAG, "onDisplayChanged: state - $displayId")
+            if (!isDisplayInUse()) {
+                startRingman()
+            } else {
+                stopRingman()
+            }
+        }
+        override fun onDisplayAdded(p0: Int) {}
+        override fun onDisplayRemoved(p0: Int) {}
+    }
 
     override fun onSensorChanged(event: SensorEvent) {
-        if (isDisplayInUse()) {
-            return
-        }
         if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
             val distanceInCm = event.values[0]
             Log.i(TAG, "onSensorChanged: prxomity is $distanceInCm cm")
@@ -131,10 +157,6 @@ class RingmanService: Service(), SensorEventListener { // TODO - check power and
     }
 
     @Synchronized private fun setRingerState(distance: Float) {
-
-//        if (isDisplayInUse()) {
-//            Log.i(TAG, "setRingerState: display in use")
-//        }
 
         // shouldn't override DND
         if (notificationManager.currentInterruptionFilter != INTERRUPTION_FILTER_ALL) {
