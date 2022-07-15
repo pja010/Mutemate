@@ -2,6 +2,7 @@ package com.example.ringman
 
 import android.app.NotificationManager
 import android.content.ContentValues
+import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
@@ -30,9 +31,8 @@ class MainActivity : AppCompatActivity() {
 
         val btn = findViewById<SwitchCompat>(R.id.switch_btn)
         // default switch to off before user enables
-        if (getServiceState(this) != ServiceState.ENABLED) {
-            btn.isChecked = false
-        }
+        Log.d(TAG, "onCreate: ${getServiceState(this)}")
+        btn.isChecked = getServiceState(this) == ServiceState.ENABLED
         btn.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 Log.i(ContentValues.TAG, "onCreate: Start service")
