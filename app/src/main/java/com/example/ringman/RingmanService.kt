@@ -21,7 +21,7 @@ import android.util.Log
 import android.view.Display.*
 import android.widget.Toast
 
-private const val CM_THRESHOLD = 0.1f
+private const val CM_THRESHOLD = 1f
 class RingmanService: Service() , SensorEventListener { // TODO - check power and memory use and optimize if necessary
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
@@ -159,13 +159,17 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     }
 
     fun startRingman() {
-        sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_FASTEST)
+//        sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+        proximity?.also { proximity ->
+            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+        Log.i(TAG, "startRingman: ${proximity?.maximumRange}")
     }
     fun stopRingman() {
         sensorManager.unregisterListener(this, proximity)
     }
 
-    override fun onSensorChanged(event: SensorEvent) {
+    override fun onSensorChanged(event: SensorEvent) { // TODO - could add delay to avoid unintended switches
         if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
             val distanceInCm = event.values[0]
             Log.i(TAG, "onSensorChanged: proximity is $distanceInCm cm")
@@ -268,6 +272,9 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     }
 
     // unneeded inheritance
-    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) { return }
+    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+        Log.i(TAG, "onAccuracyChanged: sensor=$sensor, accuracy=$accuracy")
+        return
+    }
     override fun onBind(p0: Intent?): IBinder? { return null }
 }
