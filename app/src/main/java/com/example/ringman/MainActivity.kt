@@ -1,19 +1,17 @@
 package com.example.ringman
 
 import android.app.NotificationManager
-import android.content.ContentValues
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.widget.Button
+import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
-import com.google.android.material.button.MaterialButton
 
 class MainActivity : AppCompatActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -35,11 +33,11 @@ class MainActivity : AppCompatActivity() {
         btn.isChecked = getServiceState(this) == ServiceState.ENABLED
         btn.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
-                Log.i(ContentValues.TAG, "onCreate: Start service")
+                Log.i(TAG, "onCreate: Start service")
                 actionOnService(Actions.ENABLE)
             }
             else {
-                Log.i(ContentValues.TAG, "onCreate: Stop service")
+                Log.i(TAG, "onCreate: Stop service")
                 actionOnService(Actions.DISABLE)
             }
         }
@@ -56,5 +54,4 @@ class MainActivity : AppCompatActivity() {
             startService(it)
         }
     }
-
 }

@@ -18,10 +18,11 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
-import android.view.Display.*
 import android.widget.Toast
+import kotlin.math.acos
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
-private const val CM_THRESHOLD = 1f
 class RingmanService: Service() , SensorEventListener { // TODO - check power and memory use and optimize if necessary
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
@@ -29,7 +30,13 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     private lateinit var sensorManager: SensorManager
     private lateinit var notificationManager: NotificationManager
     private lateinit var displayManager: DisplayManager
-    private var proximity: Sensor? = null
+    private var lightSensor: Sensor? = null
+    private var accSensor: Sensor? = null
+    private var luxRead = -1f
+    private var g = floatArrayOf(0f, 0f, 0f)
+    private var inclination = -1
+    private var lastSensorUpdate = 0L
+
 
     override fun onCreate() {
         super.onCreate()
@@ -44,20 +51,15 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         notificationManager = this.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-        // set up proximity sensor access
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        if (sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null) {
-            proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
-        } else {
-            Log.e(TAG, "onCreate: proximity-sensor not found")
+        accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        lightSensor = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)
+        if ((accSensor == null) || (lightSensor == null)) {
+            Log.e(TAG, "onCreate: sensors not found")
         }
 
         // setup display
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        } else {
-            Log.e(TAG, "setupDisplay: build version too low")
-        }
+        displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -122,7 +124,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
             } else {
                 stopRingman()
                 // TODO - decide on this, could wait like 10 sec, then turn off sound - BUT NEEDS ANOTHER THREAD!
-//                Thread.sleep(1000 * 10)
+//                Thread.sleep(1000 * 5)
 //                setRingerState(CM_THRESHOLD + 1f)
 ////                audioManager.ringerMode = RINGER_MODE_VIBRATE   // ringer mode when device in use
 //                audioManager.ringerMode = RINGER_MODE_SILENT   // ringer mode when device in use
@@ -133,82 +135,84 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     }
 
     private fun isDisplayInUse(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            for (display in displayManager.displays) {
-                Log.i(TAG, "isDisplayInUse: state before when = ${display.state}")
-                return when (display.state) {
-                    STATE_OFF -> false
-                    STATE_DOZE -> false
-                    STATE_DOZE_SUSPEND -> false
-                    else -> {
-                        Log.i(TAG, "setupDisplayHardware: DISPLAY STATE (should be on)- ${display.state}")
-                        true
-                    }
-                }
-            }
-            Log.d(TAG, "isDisplayInUse: No display found")
-            return false
-        } else {    // if < API20
-            Log.i(TAG, "setupDisplayHardware: checking display for API < 20")
-            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            if (powerManager.isScreenOn) {
-                return true
-            }
-            return false
-        }
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+//        Log.i(TAG, "isDisplayInUse: isInteractice - ${powerManager.isInteractive}")
+        return powerManager.isInteractive
     }
 
     fun startRingman() {
-//        sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
-        proximity?.also { proximity ->
-            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+        lightSensor?.also { lightSensor ->
+            sensorManager.registerListener(this, lightSensor, SensorManager.SENSOR_DELAY_UI)
         }
-        Log.i(TAG, "startRingman: ${proximity?.maximumRange}")
+        accSensor?.also { accSensor ->
+            sensorManager.registerListener(this, accSensor, SensorManager.SENSOR_DELAY_UI)
+        }
     }
     fun stopRingman() {
-        sensorManager.unregisterListener(this, proximity)
+        sensorManager.unregisterListener(this, lightSensor)
+        sensorManager.unregisterListener(this, accSensor)
     }
 
-    override fun onSensorChanged(event: SensorEvent) { // TODO - could add delay to avoid unintended switches
-        if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
-            val distanceInCm = event.values[0]
-            Log.i(TAG, "onSensorChanged: proximity is $distanceInCm cm")
-            setRingerState(distanceInCm)
+    override fun onSensorChanged(event: SensorEvent) {
+        val actualTime = event.timestamp
+        if(actualTime - lastSensorUpdate < 100000000) {
+            return
         }
+        if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
+            g = FloatArray(3)
+            g = event.values.clone()
+            val normOfG = sqrt((g[0] * g[0] + g[1] * g[1] + g[2] * g[2]).toDouble())
+            g[0] = (g[0] / normOfG).toFloat()
+            g[1] = (g[1] / normOfG).toFloat()
+            g[2] = (g[2] / normOfG).toFloat()
+            inclination = Math.toDegrees(acos(g[2].toDouble())).roundToInt()
+        }
+        if (event.sensor.type == Sensor.TYPE_LIGHT) {
+            luxRead = event.values[0]
+        }
+        if ((luxRead != -1f)&&(inclination != -1)) { // COULD MAKE CALL ONLY IF PARAMS PASS THRESHOLD
+            Log.i(TAG, "onSensorChanged: light=$luxRead inclination=$inclination gravity=${g[1]}")
+            setRingerState(luxRead, g, inclination)
+        }
+        lastSensorUpdate = actualTime
     }
 
-    @Synchronized private fun setRingerState(distance: Float) {
-        Log.i(TAG, "setRingerState: passed a distance of $distance")
+    @Synchronized private fun setRingerState(light: Float, g: FloatArray, inclination: Int) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            Log.e(TAG, "setRingerState: build ${Build.VERSION.SDK_INT} too low")
+            return
+        }
         // shouldn't override DND
         if (notificationManager.currentInterruptionFilter != INTERRUPTION_FILTER_ALL) {
             Log.d(TAG, "setRingerState: interruptFilter is ${notificationManager.currentInterruptionFilter}")
             return
         }
 
-        Log.i(TAG, "setRingerState: audioManagerMode? ${audioManager.mode}")
-        Log.i(TAG, "setRingerState: display is on? ${isDisplayInUse()}")
+//        Log.i(TAG, "setRingerState: audioManagerMode? ${audioManager.mode}")
+//        Log.i(TAG, "setRingerState: display is on? ${isDisplayInUse()}")
         if (isDisplayInUse() || isCallActive()) {
             Log.i(TAG, "setRingerState: display in use")
             return
         }
-
-        // core business logic
-        if (distance <= CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
-        {
-            Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
-
-            audioManager.ringerMode = RINGER_MODE_VIBRATE
-            Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
+        // CORE LOGIC
+        if (deviceInPocket(light, g, inclination)) { // IN POCKET
+            if (audioManager.ringerMode != RINGER_MODE_VIBRATE) {
+                Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
+                audioManager.ringerMode = RINGER_MODE_VIBRATE
+                Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
+            }
         }
-        else if (distance > CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_NORMAL)
-        {
-            Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
-
-            audioManager.ringerMode = RINGER_MODE_NORMAL
-            Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
+        else {  // OUT OF POCKET
+                if (audioManager.ringerMode != RINGER_MODE_NORMAL) {
+                    Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
+                    audioManager.ringerMode = RINGER_MODE_NORMAL
+                    Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
+                }
+            }
         }
-        return
-    }
+
+    private fun deviceInPocket(light: Float, g: FloatArray, inclination: Int) =
+        (light < 10) && (g[1] < -0.6) && ((inclination > 75) && (inclination < 100))
 
     private fun isCallActive(): Boolean {
         return when (audioManager.mode) {
