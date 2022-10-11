@@ -118,7 +118,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayChanged(displayId: Int) {
             stopRingman()
-            Log.i(TAG, "onDisplayChanged: state - $displayId")
+//            Log.i(TAG, "onDisplayChanged: state - $displayId")
             if (!isDisplayInUse()) {
                 startRingman()
             } else {
@@ -155,7 +155,9 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
 
     override fun onSensorChanged(event: SensorEvent) {
         val actualTime = event.timestamp
-        if(actualTime - lastSensorUpdate < 100000000) {
+//        val threashold = 500000000
+        val threashold = 50
+        if(actualTime - lastSensorUpdate < threashold) {
             return
         }
         if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
@@ -184,7 +186,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         }
         // shouldn't override DND
         if (notificationManager.currentInterruptionFilter != INTERRUPTION_FILTER_ALL) {
-            Log.d(TAG, "setRingerState: interruptFilter is ${notificationManager.currentInterruptionFilter}")
+//            Log.d(TAG, "setRingerState: interruptFilter is ${notificationManager.currentInterruptionFilter}")
             return
         }
 
@@ -199,20 +201,22 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
             if (audioManager.ringerMode != RINGER_MODE_VIBRATE) {
                 Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
                 audioManager.ringerMode = RINGER_MODE_VIBRATE
-                Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
+//                Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
             }
         }
         else {  // OUT OF POCKET
                 if (audioManager.ringerMode != RINGER_MODE_NORMAL) {
-                    Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
+//                    Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
                     audioManager.ringerMode = RINGER_MODE_NORMAL
-                    Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
+//                    Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
                 }
             }
         }
 
     private fun deviceInPocket(light: Float, g: FloatArray, inclination: Int) =
-        (light < 10) && (g[1] < -0.6) && ((inclination > 75) && (inclination < 100))
+//        (light < 10) && (g[1] < -0.6) && ((inclination > 75) && (inclination < 100))
+        (light < 3) && (inclination > 25)
+
 
     private fun isCallActive(): Boolean {
         return when (audioManager.mode) {
