@@ -1,6 +1,6 @@
 package com.example.ringman
 
-enum class Actions {
+enum class Commands {
     ENABLE,
     DISABLE
 }

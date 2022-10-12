@@ -18,11 +18,12 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.os.SystemClock
 import android.util.Log
-import android.view.Display.*
 import android.widget.Toast
 
 private const val CM_THRESHOLD = 1f
-class RingmanService: Service() , SensorEventListener { // TODO - check power and memory use and optimize if necessary
+private const val NANOS_THRESHOLD = 500000000
+
+class RingmanService: Service() , SensorEventListener {
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
     private lateinit var audioManager: AudioManager
@@ -30,6 +31,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     private lateinit var notificationManager: NotificationManager
     private lateinit var displayManager: DisplayManager
     private var proximity: Sensor? = null
+    private var timeOfLastSensorUpdate = 0L
 
     override fun onCreate() {
         super.onCreate()
@@ -40,32 +42,28 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     }
 
     private fun setupSensorHardware() {
-        // set up ringer for use
+        // Set up ringer for use.
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         notificationManager = this.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-        // set up proximity sensor access
+        // Proximity sensor access.
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         if (sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null) {
             proximity = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
         } else {
-            Log.e(TAG, "onCreate: proximity-sensor not found")
+            Log.e(TAG, "setupSensorHardware: proximity-sensor not found")
         }
 
-        // setup display
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-        } else {
-            Log.e(TAG, "setupDisplay: build version too low")
-        }
+        // Device display state.
+        displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.i(TAG, "onStartCommand: executed with startId: $startId")
         if (intent != null) {
             when (intent.action) {
-                Actions.ENABLE.name -> startService()
-                Actions.DISABLE.name -> stopService()
+                Commands.ENABLE.name -> startService()
+                Commands.DISABLE.name -> stopService()
             }
         } else {
             Log.e(TAG, "onStartCommand: null intent")
@@ -76,9 +74,9 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
     private fun startService() {
         if (isServiceStarted) return
         Log.i(TAG, "startService: starting foreground service")
-        Toast.makeText(this, "Ringman enabled", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Automute enabled", Toast.LENGTH_SHORT).show()
         isServiceStarted = true
-        setServiceState(this, ServiceState.ENABLED)
+        saveServiceState(this, ServiceState.ENABLED)
 
         wakeLock =
             (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
@@ -87,7 +85,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
                 }
             }
 
-        if (isServiceStarted) {  // todo - launch in coroutine? Would that improve performance and resilience?
+        if (isServiceStarted) {
             displayManager.registerDisplayListener(displayListener, null)
             Log.i(TAG, "setupDisplay: listener registered")
         }
@@ -95,7 +93,7 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
 
     private fun stopService() {
         Log.i(TAG, "stopService: stopping")
-        Toast.makeText(this, "Ringman disabled", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Automute disabled", Toast.LENGTH_SHORT).show()
         try {
             wakeLock?.let {
                 if (it.isHeld) {
@@ -108,106 +106,88 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
             Log.e(TAG, "stopService: service stopped without starting ${e.message}")
         }
         isServiceStarted = false
-        setServiceState(this, ServiceState.DISABLED)
-        stopRingman()
+        saveServiceState(this, ServiceState.DISABLED)
+        stopAutomute()
         displayManager.unregisterDisplayListener(displayListener)
     }
 
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayChanged(displayId: Int) {
-            stopRingman()
-            Log.i(TAG, "onDisplayChanged: state - $displayId")
+            stopAutomute()
+            Log.i(TAG, "onDisplayChanged: displayId - $displayId")
             if (!isDisplayInUse()) {
-                startRingman()
+                startAutomute()
             } else {
-                stopRingman()
-                // TODO - decide on this, could wait like 10 sec, then turn off sound - BUT NEEDS ANOTHER THREAD!
-//                Thread.sleep(1000 * 10)
-//                setRingerState(CM_THRESHOLD + 1f)
-////                audioManager.ringerMode = RINGER_MODE_VIBRATE   // ringer mode when device in use
-//                audioManager.ringerMode = RINGER_MODE_SILENT   // ringer mode when device in use
+                stopAutomute()
             }
         }
-        override fun onDisplayAdded(p0: Int) {}
-        override fun onDisplayRemoved(p0: Int) {}
+        override fun onDisplayAdded(displayId: Int) {
+            Log.i(TAG, "onDisplayAdded: displayId - $displayId")
+        }
+        override fun onDisplayRemoved(displayId: Int) {
+            Log.i(TAG, "onDisplayRemoved: displayId - $displayId")
+        }
     }
 
     private fun isDisplayInUse(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            for (display in displayManager.displays) {
-                Log.i(TAG, "isDisplayInUse: state before when = ${display.state}")
-                return when (display.state) {
-                    STATE_OFF -> false
-                    STATE_DOZE -> false
-                    STATE_DOZE_SUSPEND -> false
-                    else -> {
-                        Log.i(TAG, "setupDisplayHardware: DISPLAY STATE (should be on)- ${display.state}")
-                        true
-                    }
-                }
-            }
-            Log.d(TAG, "isDisplayInUse: No display found")
-            return false
-        } else {    // if < API20
-            Log.i(TAG, "setupDisplayHardware: checking display for API < 20")
-            val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-            if (powerManager.isScreenOn) {
-                return true
-            }
-            return false
-        }
+        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
+        return powerManager.isInteractive
     }
 
-    fun startRingman() {
-//        sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+    fun startAutomute() {
         proximity?.also { proximity ->
             sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
         }
-        Log.i(TAG, "startRingman: ${proximity?.maximumRange}")
+        Log.i(TAG, "startAutomute: ${proximity?.maximumRange}")
     }
-    fun stopRingman() {
+    fun stopAutomute() {
         sensorManager.unregisterListener(this, proximity)
     }
 
     override fun onSensorChanged(event: SensorEvent) { // TODO - could add delay to avoid unintended switches
-        if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
-            val distanceInCm = event.values[0]
-            Log.i(TAG, "onSensorChanged: proximity is $distanceInCm cm")
-            setRingerState(distanceInCm)
+        val actualTimeInNanoSec = event.timestamp
+        Log.i(TAG, "onSensorChanged: time now - $actualTimeInNanoSec")
+        Log.i(TAG, "onSensorChanged: time of last update- $timeOfLastSensorUpdate")
+        if(actualTimeInNanoSec - timeOfLastSensorUpdate < NANOS_THRESHOLD) {
+            return
         }
+        if (event.sensor.type == Sensor.TYPE_PROXIMITY) {
+            val proximityInCm = event.values[0]
+            Log.d(TAG, "onSensorChanged: proximity is $proximityInCm cm")
+            val isInPocket = isDeviceInPocket(proximityInCm)
+            setRingerState(isInPocket)
+        }
+        timeOfLastSensorUpdate = actualTimeInNanoSec
+    }
+    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+        Log.d(TAG, "onAccuracyChanged: sensor=$sensor, accuracy=$accuracy")
+        return
     }
 
-    @Synchronized private fun setRingerState(distance: Float) {
-        Log.i(TAG, "setRingerState: passed a distance of $distance")
-        // shouldn't override DND
+    @Synchronized private fun setRingerState(isInPocket: Boolean) {
+
+        // System should not override Do-Not-Disturb mode.
         if (notificationManager.currentInterruptionFilter != INTERRUPTION_FILTER_ALL) {
             Log.d(TAG, "setRingerState: interruptFilter is ${notificationManager.currentInterruptionFilter}")
             return
         }
 
-        Log.i(TAG, "setRingerState: audioManagerMode? ${audioManager.mode}")
-        Log.i(TAG, "setRingerState: display is on? ${isDisplayInUse()}")
         if (isDisplayInUse() || isCallActive()) {
-            Log.i(TAG, "setRingerState: display in use")
+            Log.d(TAG, "setRingerState: display in use")
             return
         }
 
-        // core business logic
-        if (distance <= CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_VIBRATE)
-        {
-            Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
-
+        // Core application logic.
+        if (isInPocket && audioManager.ringerMode != RINGER_MODE_VIBRATE) {
             audioManager.ringerMode = RINGER_MODE_VIBRATE
-            Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
-        }
-        else if (distance > CM_THRESHOLD && audioManager.ringerMode != RINGER_MODE_NORMAL)
-        {
-            Log.i(TAG, "setRingerState (right bef): ${audioManager.ringerMode}")
-
+        } else if (!isInPocket && audioManager.ringerMode != RINGER_MODE_NORMAL) {
             audioManager.ringerMode = RINGER_MODE_NORMAL
-            Log.i(TAG, "setRingerState: ${audioManager.ringerMode}")
         }
         return
+    }
+
+    private fun isDeviceInPocket(proximityInCm: Float): Boolean {
+        return proximityInCm <= CM_THRESHOLD
     }
 
     private fun isCallActive(): Boolean {
@@ -220,22 +200,22 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
 
     override fun onDestroy() {
         super.onDestroy()
-        stopRingman()
+        stopAutomute()
         displayManager.unregisterDisplayListener(displayListener)
         Log.i(TAG, "onDestroy: service destroyed")
     }
 
     private fun createNotification(): Notification {
-        val notificationChannelId = "RINGMAN_SERVICE_CHANNEL"
+        val notificationChannelId = "Automute_SERVICE_CHANNEL"
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val channel = NotificationChannel(
                 notificationChannelId,
-                "ringman-notifications-channel",
+                "Automute-notifications-channel",
                 NotificationManager.IMPORTANCE_LOW
             ).let {
-                it.description = "Ringman service channel"
+                it.description = "Automute-service-channel"
                 it
             }
             notificationManager.createNotificationChannel(channel)
@@ -252,12 +232,12 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         ) else Notification.Builder(this)
 
         return builder
-            .setContentTitle("Ringman")
-            .setContentText("Ringman handles ringer state")
+            .setContentTitle("Automute")
+            .setContentText("Automute activated")
             .setContentIntent(pendingIntent)
-            .setTicker("Ringman handles ringer state")
+            .setTicker("Automute activated")
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setPriority(Notification.PRIORITY_LOW) // compatibility with < android 26
+            .setPriority(Notification.PRIORITY_LOW) // Compatibility with < android 26.
             .build()
     }
 
@@ -271,10 +251,8 @@ class RingmanService: Service() , SensorEventListener { // TODO - check power an
         alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent)
     }
 
-    // unneeded inheritance
-    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
-        Log.i(TAG, "onAccuracyChanged: sensor=$sensor, accuracy=$accuracy")
-        return
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
     }
-    override fun onBind(p0: Intent?): IBinder? { return null }
+
 }

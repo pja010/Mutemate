@@ -15,7 +15,7 @@ private fun getPreferences(context: Context): SharedPreferences {
     return context.getSharedPreferences(name, 0)
 }
 
-fun setServiceState(context: Context, state: ServiceState) {
+fun saveServiceState(context: Context, state: ServiceState) {
     with(getPreferences(context).edit()) {
         putString(key, state.name)
         apply()

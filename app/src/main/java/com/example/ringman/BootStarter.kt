@@ -11,13 +11,13 @@ class BootStarter: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED && getServiceState(context) == ServiceState.ENABLED) {
             Intent(context, RingmanService::class.java).also {
-                it.action = Actions.ENABLE.name
+                it.action = Commands.ENABLE.name
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    Log.i(TAG, "onReceive: Starting service in >= 26 Mode on boot")
+                    Log.i(TAG, "Boot-starting service in >= 26 Mode")
                     context.startForegroundService(it)
                     return
                 }
-                Log.i(TAG, "onReceive: Starting service in < 26 Mode on boot")
+                Log.i(TAG, "Boot-starting service in < 26 Mode on boot")
                 context.startService(it)
             }
         }
