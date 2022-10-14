@@ -247,11 +247,11 @@ class RingmanService: Service() , SensorEventListener {
         ) else Notification.Builder(this)
 
         return builder
-            .setContentTitle("Automute")
-            .setContentText("Automute activated")
+            .setContentTitle("Mutemate")
+            .setContentText("Mutemate activated")
             .setContentIntent(pendingIntent)
-            .setTicker("Automute activated")
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setTicker("Mutemate activated")
+            .setSmallIcon(R.mipmap.ic_launcher_round)
             .setPriority(Notification.PRIORITY_LOW) // Compatibility with < android 26.
             .build()
     }

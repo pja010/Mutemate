@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        supportActionBar?.hide()
 
         // Grant access to override ringer state.
         val notificationManager = this.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
