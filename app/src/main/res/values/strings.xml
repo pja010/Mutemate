@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">Ringman</string>
+    <string name="app_name">Mutemate</string>
+    <string name="main_label">Let Mutemate handle your ringer mode</string>
 </resources>
