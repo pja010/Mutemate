@@ -1,24 +1,22 @@
+<img src=https://github.com/pja010/Ringman/blob/prod/app/src/main/res/drawable/app_icon.png alt=logo width=20% height=20%>
+
 # Mutemate
 ### Mobile Application Project
 
-If you (or other people)...
-* ...get annoyed when your (or someone else's) phone rings loudly in 
-social, noise-sensitive places
-* ...forget to "unmute" after putting device aside 
+If you (or others) get annoyed when... 
+- your phone rings or make noise in noise-sensitive places AND/OR 
+- you forget to "unmute" your phone after putting it aside, not hearing calls
 
-then fret no more - Mutemate is your friend in need.
+then fret no more - <i>Mutemate is your friend in need.</i>
 
 #### Never more worry about "forgetting to mute"
 Instead of having to remember to mute (and "unmute") your phone, make the phone do it by itself.
 
-Mutemate automatically sets your phone into vibrate mode when you put it in your pocket
+<i>Mutemate automatically sets your phone into vibrate mode when you put it in your pocket</i>
 (and sets it back to ringer mode when taken out and put away). Yes I know, very convenient - that's the point (see the next point). 
 
 ## A vision of invisible computing tools
-This is an app that is not about itself, but about saving people 
-from having to bother muting and unmuting their phones. 
-from the time
-and annoyance of having to mute and unmute their phone.
+Mutemate is an app that is not about itself, but about saving people from having to remember (and bother) muting their phones. It may be small annoyance, but a repeatedly occuring one, which adds up to lot of annoyance!
 
 While this is a little tool that lives within ~300 lines of code, 
 it embodies a larger vision of computing tools that are less about maximizing 
@@ -28,7 +26,9 @@ needs.
 Creator:
 Per Astrom
 
-## Download on Play Store: (Soon to come)
+## Download 
+#### Android Play Store: (Soon to come)
+#### iOS - TBD
 
 ### Note
 Mutemate relies on proximity sensor hardware (found in nearly all smart phones). 
