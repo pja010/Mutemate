@@ -5,7 +5,7 @@
 
 If you (or others) get annoyed when... 
 - your phone rings or make noise in noise-sensitive places AND/OR 
-- you forget to "unmute" your phone after putting it aside, not hearing calls
+- you forget to "unmute" your phone after putting it aside, not hearing incoming calls and alerts
 
 then fret no more - <i>Mutemate is your friend in need.</i>
 
@@ -13,7 +13,7 @@ then fret no more - <i>Mutemate is your friend in need.</i>
 Instead of having to remember to mute (and "unmute") your phone, make the phone do it by itself.
 
 <i>Mutemate automatically sets your phone into vibrate mode when you put it in your pocket</i>
-(and sets it back to ringer mode when taken out and put away). Yes I know, very convenient - that's the point (see the next point). 
+(and sets it back to ringer mode when taken out and put away). You feel calls and notifications, yet no one is disturbed. Yes I know, very convenient - that's the point (see the next point). 
 
 ## A vision of invisible computing tools
 Mutemate is an app that is not about itself, but about saving people from having to remember (and bother) muting their phones. It may be small annoyance, but a repeatedly occuring one, which adds up to lot of annoyance!
