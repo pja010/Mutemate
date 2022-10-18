@@ -1,14 +1,3 @@
-// todo - picture
-
-<div align='center'>
-  <a href='https://github.com/chroline/well_app/releases'>
-    <img src='https://img.shields.io/github/v/release/chroline/well_app?color=%23FDD835&label=version&style=for-the-badge'>
-  </a>
-  <a href='https://github.com/pja010/Ringman/main/LICENSE'>
-    <img src='https://img.shields.io/github/license/chroline/well_app?style=for-the-badge'>
-  </a>
-</div>
-
 # Mutemate
 ### Mobile Application Project
 
@@ -39,7 +28,7 @@ needs.
 Creator:
 Per Astrom
 
-## Download on Play Store 
+## Download on Play Store: (Soon to come)
 
 ### Note
 Mutemate relies on proximity sensor hardware (found in nearly all smart phones). 
