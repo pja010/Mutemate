@@ -11,18 +11,29 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:textSize="16sp"
-            android:paddingTop="40sp"
-            android:paddingBottom="40sp"
-            android:text="Let Ringman handle your ringer mode"/>
+            android:textSize="24sp"
+            android:paddingStart="10sp"
+            android:paddingEnd="10sp"
+            android:paddingTop="80sp"
+            android:paddingBottom="60sp"
+            android:gravity="center"
+            android:text="@string/app_name"/>
+
     <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/switch_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingTop="30sp"
+            android:paddingBottom="30sp"
+            android:paddingStart="10sp"
+            android:paddingEnd="2sp"
             android:layout_gravity="center_horizontal"
             android:scaleX="2"
             android:scaleY="2"
             android:checked="false"
-    />
+            android:background="@drawable/rounded_rectangle"
+            android:text="@string/switch_label"
+            android:textSize="9sp"
+            app:switchTextAppearance="@style/TextAppearance.AppCompat.Medium"/>
 
 </LinearLayout>
