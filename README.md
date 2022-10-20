@@ -12,7 +12,6 @@ Instead of having to remember to mute (and "unmute") your phone, make the phone 
 
 <i>Mutemate automatically sets your phone into vibrate mode when you put it in your pocket</i>
 (and sets it back to ringer mode when taken out and put away). You feel calls and notifications, yet no one is disturbed. Yes I know, very convenient - that's the point (see the next point). 
-</ br>
 
 ## A vision of invisible computing tools
 Mutemate is an app that is not about itself, but about saving people from having to remember (and bother) muting their phones. Muting may be small annoyance, but a repeatedly occuring one, which adds up to lot of annoyance!
