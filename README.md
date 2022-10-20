@@ -2,7 +2,7 @@
 
 # Mutemate - Mobile Application Project
 #### If you (or others) get annoyed when... 
-- your phone rings or make noise in noise-sensitive places AND/OR 
+- your phone rings or makes noise in noise-sensitive places AND/OR 
 - you forget to "unmute" your phone after putting it aside, not hearing incoming calls and alerts
 
 ...then fret no more - <i>Mutemate is your friend in need.</i>
