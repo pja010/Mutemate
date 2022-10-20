@@ -15,7 +15,7 @@ Mutemate automatically sets your phone into vibrate mode when you put it in your
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-package com.example.ringman
+package com.pja.mutemate
 
 import android.app.*
 import android.app.NotificationManager.INTERRUPTION_FILTER_ALL
@@ -40,7 +40,7 @@ import android.widget.Toast
 private const val CM_THRESHOLD = 1f
 private const val NANOS_THRESHOLD = 500000000
 
-class RingmanService: Service() , SensorEventListener {
+class MuteService: Service() , SensorEventListener {
     private var wakeLock: PowerManager.WakeLock? = null
     private var isServiceStarted = false
     private lateinit var audioManager: AudioManager
@@ -52,7 +52,7 @@ class RingmanService: Service() , SensorEventListener {
 
     override fun onCreate() {
         super.onCreate()
-        Log.i(TAG, "onCreate: service created")
+        Log.d(TAG, "onCreate: service created")
         val notification = createNotification()
         startForeground(1, notification)
         setupSensorHardware()
@@ -76,7 +76,7 @@ class RingmanService: Service() , SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.i(TAG, "onStartCommand: executed with startId: $startId")
+        Log.d(TAG, "onStartCommand: executed with startId: $startId")
         if (intent != null) {
             when (intent.action) {
                 Commands.ENABLE.name -> startService()
@@ -90,7 +90,7 @@ class RingmanService: Service() , SensorEventListener {
 
     private fun startService() {
         if (isServiceStarted) return
-        Log.i(TAG, "startService: starting foreground service")
+        Log.d(TAG, "startService: starting foreground service")
         Toast.makeText(this, "Automute enabled", Toast.LENGTH_SHORT).show()
         isServiceStarted = true
         saveServiceState(this, ServiceState.ENABLED)
@@ -104,12 +104,12 @@ class RingmanService: Service() , SensorEventListener {
 
         if (isServiceStarted) {
             displayManager.registerDisplayListener(displayListener, null)
-            Log.i(TAG, "setupDisplay: listener registered")
+            Log.d(TAG, "setupDisplay: listener registered")
         }
     }
 
     private fun stopService() {
-        Log.i(TAG, "stopService: stopping")
+        Log.d(TAG, "stopService: stopping")
         Toast.makeText(this, "Automute disabled", Toast.LENGTH_SHORT).show()
         try {
             wakeLock?.let {
@@ -131,7 +131,7 @@ class RingmanService: Service() , SensorEventListener {
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayChanged(displayId: Int) {
             stopAutomute()
-            Log.i(TAG, "onDisplayChanged: displayId - $displayId")
+            Log.d(TAG, "onDisplayChanged: displayId - $displayId")
             if (!isDisplayInUse()) {
                 startAutomute()
             } else {
@@ -139,10 +139,10 @@ class RingmanService: Service() , SensorEventListener {
             }
         }
         override fun onDisplayAdded(displayId: Int) {
-            Log.i(TAG, "onDisplayAdded: displayId - $displayId")
+            Log.d(TAG, "onDisplayAdded: displayId - $displayId")
         }
         override fun onDisplayRemoved(displayId: Int) {
-            Log.i(TAG, "onDisplayRemoved: displayId - $displayId")
+            Log.d(TAG, "onDisplayRemoved: displayId - $displayId")
         }
     }
 
@@ -153,18 +153,18 @@ class RingmanService: Service() , SensorEventListener {
 
     fun startAutomute() {
         proximity?.also { proximity ->
-            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, proximity, SensorManager.SENSOR_DELAY_UI)
         }
-        Log.i(TAG, "startAutomute: ${proximity?.maximumRange}")
+        Log.d(TAG, "startAutomute: ${proximity?.maximumRange}")
     }
     fun stopAutomute() {
         sensorManager.unregisterListener(this, proximity)
     }
 
-    override fun onSensorChanged(event: SensorEvent) { // TODO - could add delay to avoid unintended switches
+    override fun onSensorChanged(event: SensorEvent) {
         val actualTimeInNanoSec = event.timestamp
-        Log.i(TAG, "onSensorChanged: time now - $actualTimeInNanoSec")
-        Log.i(TAG, "onSensorChanged: time of last update- $timeOfLastSensorUpdate")
+        Log.d(TAG, "onSensorChanged: time now - $actualTimeInNanoSec")
+        Log.d(TAG, "onSensorChanged: time of last update- $timeOfLastSensorUpdate")
         if(actualTimeInNanoSec - timeOfLastSensorUpdate < NANOS_THRESHOLD) {
             return
         }
@@ -219,7 +219,7 @@ class RingmanService: Service() , SensorEventListener {
         super.onDestroy()
         stopAutomute()
         displayManager.unregisterDisplayListener(displayListener)
-        Log.i(TAG, "onDestroy: service destroyed")
+        Log.d(TAG, "onDestroy: service destroyed")
     }
 
     private fun createNotification(): Notification {
@@ -259,7 +259,7 @@ class RingmanService: Service() , SensorEventListener {
     }
 
     override fun onTaskRemoved(rootIntent: Intent) {
-        val restartServiceIntent = Intent(applicationContext, RingmanService::class.java).also {
+        val restartServiceIntent = Intent(applicationContext, MuteService::class.java).also {
             it.setPackage(packageName)
         }
         val restartServicePendingIntent: PendingIntent = PendingIntent.getService(this, 1, restartServiceIntent, FLAG_IMMUTABLE)

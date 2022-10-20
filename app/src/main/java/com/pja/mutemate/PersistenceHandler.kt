@@ -1,4 +1,4 @@
-package com.example.ringman
+package com.pja.mutemate
 
 import android.content.Context
 import android.content.SharedPreferences

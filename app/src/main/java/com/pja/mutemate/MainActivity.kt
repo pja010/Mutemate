@@ -15,7 +15,7 @@ Mutemate automatically sets your phone into vibrate mode when you put it in your
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
-package com.example.ringman
+package com.pja.mutemate
 
 import android.app.NotificationManager
 import android.content.ContentValues.TAG
@@ -62,7 +62,7 @@ class MainActivity : AppCompatActivity() {
         ) {
             return
         }
-        Intent(this, RingmanService::class.java).also {
+        Intent(this, MuteService::class.java).also {
             it.action = command.name
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(it)
