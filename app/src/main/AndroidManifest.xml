@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.example.ringman">
+          package="com.pja.mutemate">
 
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
@@ -20,13 +20,13 @@
             android:theme="@style/Theme.Ringman">
 
         <service
-                android:name=".RingmanService"
+                android:name="com.pja.mutemate.MuteService"
                 android:enabled="true"
                 android:exported="false">
         </service>
 
         <activity
-                android:name=".MainActivity"
+                android:name="com.pja.mutemate.MainActivity"
                 android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -35,7 +35,7 @@
             </intent-filter>
         </activity>
 
-        <receiver android:enabled="true" android:name=".BootStarter" android:exported="true">
+        <receiver android:enabled="true" android:name="com.pja.mutemate.BootStarter" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>

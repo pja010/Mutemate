@@ -1,4 +1,4 @@
-package com.example.ringman
+package com.pja.mutemate
 
 enum class Commands {
     ENABLE,
